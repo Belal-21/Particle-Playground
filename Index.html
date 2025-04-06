@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Particle Playground</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <style>
+        body {
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        
+        .control-panel {
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+        
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        
+        .color-option {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .color-option:hover {
+            transform: scale(1.2);
+        }
+        
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: white;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white">
+    <canvas id="particleCanvas"></canvas>
+    
+    <div class="fixed top-0 left-0 w-full h-full pointer-events-none" id="interactionArea"></div>
+    
+    <div class="fixed bottom-6 right-6 z-50 flex flex-col space-y-4">
+        <button id="togglePanel" class="bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-full shadow-lg pointer-events-auto transition-all transform hover:scale-110">
+            <i class="fas fa-sliders-h text-xl"></i>
+        </button>
+        
+        <button id="clearBtn" class="bg-red-600 hover:bg-red-700 text-white p-4 rounded-full shadow-lg pointer-events-auto transition-all transform hover:scale-110">
+            <i class="fas fa-trash text-xl"></i>
+        </button>
+    </div>
+    
+    <div id="controlPanel" class="control-panel fixed top-0 right-0 h-full w-80 bg-gray-800 bg-opacity-80 p-6 shadow-2xl transform translate-x-full transition-transform duration-300 z-40 overflow-y-auto">
+        <h2 class="text-2xl font-bold mb-6 flex items-center">
+            <i class="fas fa-atom mr-2"></i>
+            Particle Playground
+        </h2>
+        
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-3 flex items-center">
+                <i class="fas fa-palette mr-2"></i>
+                Color Scheme
+            </h3>
+            <div class="flex flex-wrap gap-3">
+                <div class="color-option bg-gradient-to-r from-purple-500 to-pink-500" data-colors="purple-500,pink-500"></div>
+                <div class="color-option bg-gradient-to-r from-blue-400 to-cyan-400" data-colors="blue-400,cyan-400"></div>
+                <div class="color-option bg-gradient-to-r from-green-400 to-teal-400" data-colors="green-400,teal-400"></div>
+                <div class="color-option bg-gradient-to-r from-yellow-400 to-orange-500" data-colors="yellow-400,orange-500"></div>
+                <div class="color-option bg-gradient-to-r from-red-500 to-pink-500" data-colors="red-500,pink-500"></div>
+                <div class="color-option bg-white" data-colors="white"></div>
+            </div>
+        </div>
+        
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-3 flex items-center">
+                <i class="fas fa-tint mr-2"></i>
+                Particle Count
+            </h3>
+            <input type="range" id="particleCount" min="50" max="500" value="200" class="w-full">
+            <div class="flex justify-between text-sm mt-1">
+                <span>50</span>
+                <span id="countValue">200</span>
+                <span>500</span>
+            </div>
+        </div>
+        
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-3 flex items-center">
+                <i class="fas fa-expand mr-2"></i>
+                Particle Size
+            </h3>
+            <input type="range" id="particleSize" min="1" max="10" value="3" class="w-full">
+            <div class="flex justify-between text-sm mt-1">
+                <span>1</span>
+                <span id="sizeValue">3</span>
+                <span>10</span>
+            </div>
+        </div>
+        
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-3 flex items-center">
+                <i class="fas fa-running mr-2"></i>
+                Particle Speed
+            </h3>
+            <input type="range" id="particleSpeed" min="0.1" max="3" step="0.1" value="1" class="w-full">
+            <div class="flex justify-between text-sm mt-1">
+                <span>Slow</span>
+                <span id="speedValue">1.0</span>
+                <span>Fast</span>
+            </div>
+        </div>
+        
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-3 flex items-center">
+                <i class="fas fa-magnet mr-2"></i>
+                Attraction Force
+            </h3>
+            <input type="range" id="attractionForce" min="0" max="2" step="0.1" value="0.5" class="w-full">
+            <div class="flex justify-between text-sm mt-1">
+                <span>None</span>
+                <span id="forceValue">0.5</span>
+                <span>Strong</span>
+            </div>
+        </div>
+        
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-3 flex items-center">
+                <i class="fas fa-project-diagram mr-2"></i>
+                Connection Distance
+            </h3>
+            <input type="range" id="connectionDistance" min="50" max="300" value="150" class="w-full">
+            <div class="flex justify-between text-sm mt-1">
+                <span>50</span>
+                <span id="distanceValue">150</span>
+                <span>300</span>
+            </div>
+        </div>
+        
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-3 flex items-center">
+                <i class="fas fa-eye mr-2"></i>
+                Show Connections
+            </h3>
+            <label class="inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="showConnections" class="sr-only peer" checked>
+                <div class="relative w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                <span class="ml-3 text-sm">Enable</span>
+            </label>
+        </div>
+        
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-3 flex items-center">
+                <i class="fas fa-mouse-pointer mr-2"></i>
+                Interaction Mode
+            </h3>
+            <div class="flex space-x-2">
+                <button id="modeAttract" class="px-4 py-2 bg-indigo-600 rounded-md flex-1">Attract</button>
+                <button id="modeRepel" class="px-4 py-2 bg-gray-700 rounded-md flex-1">Repel</button>
+            </div>
+        </div>
+        
+        <div class="mt-8">
+            <button id="randomizeBtn" class="w-full py-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-md font-semibold hover:opacity-90 transition-opacity">
+                <i class="fas fa-random mr-2"></i> Randomize Everything
+            </button>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Canvas setup
+            const canvas = document.getElementById('particleCanvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            // Settings
+            let settings = {
+                particleCount: 200,
+                particleSize: 3,
+                speed: 1,
+                attractionForce: 0.5,
+                connectionDistance: 150,
+                showConnections: true,
+                interactionMode: 'attract',
+                colors: ['#8B5CF6', '#EC4899'], // purple to pink gradient
+                bgColor: 'rgba(17, 24, 39, 0.2)'
+            };
+            
+            // Particles array
+            let particles = [];
+            
+            // Mouse position
+            let mouse = {
+                x: null,
+                y: null,
+                radius: 100
+            };
+            
+            // Initialize particles
+            function initParticles() {
+                particles = [];
+                for (let i = 0; i < settings.particleCount; i++) {
+                    particles.push({
+                        x: Math.random() * canvas.width,
+                        y: Math.random() * canvas.height,
+                        size: Math.random() * settings.particleSize + 1,
+                        speedX: (Math.random() - 0.5) * settings.speed,
+                        speedY: (Math.random() - 0.5) * settings.speed,
+                        color: getRandomColor()
+                    });
+                }
+            }
+            
+            // Get random color from gradient
+            function getRandomColor() {
+                if (settings.colors.length === 1) {
+                    return settings.colors[0];
+                }
+                
+                const color1 = settings.colors[0];
+                const color2 = settings.colors[1];
+                const ratio = Math.random();
+                
+                // Simple gradient interpolation
+                if (color1.startsWith('#') && color2.startsWith('#')) {
+                    const r1 = parseInt(color1.substring(1, 3), 16);
+                    const g1 = parseInt(color1.substring(3, 5), 16);
+                    const b1 = parseInt(color1.substring(5, 7), 16);
+                    
+                    const r2 = parseInt(color2.substring(1, 3), 16);
+                    const g2 = parseInt(color2.substring(3, 5), 16);
+                    const b2 = parseInt(color2.substring(5, 7), 16);
+                    
+                    const r = Math.floor(r1 * (1 - ratio) + r2 * ratio);
+                    const g = Math.floor(g1 * (1 - ratio) + g2 * ratio);
+                    const b = Math.floor(b1 * (1 - ratio) + b2 * ratio);
+                    
+                    return `rgb(${r}, ${g}, ${b})`;
+                }
+                
+                // Fallback to first color
+                return settings.colors[0];
+            }
+            
+            // Animation loop
+            function animate() {
+                requestAnimationFrame(animate);
+                ctx.fillStyle = settings.bgColor;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Update and draw particles
+                for (let i = 0; i < particles.length; i++) {
+                    const p = particles[i];
+                    
+                    // Update position
+                    p.x += p.speedX;
+                    p.y += p.speedY;
+                    
+                    // Bounce off walls
+                    if (p.x < 0 || p.x > canvas.width) p.speedX *= -1;
+                    if (p.y < 0 || p.y > canvas.height) p.speedY *= -1;
+                    
+                    // Mouse interaction
+                    if (mouse.x && mouse.y) {
+                        const dx = mouse.x - p.x;
+                        const dy = mouse.y - p.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (distance < mouse.radius) {
+                            const angle = Math.atan2(dy, dx);
+                            const force = (mouse.radius - distance) / mouse.radius * 5;
+                            
+                            if (settings.interactionMode === 'attract') {
+                                p.x -= Math.cos(angle) * force * settings.attractionForce;
+                                p.y -= Math.sin(angle) * force * settings.attractionForce;
+                            } else {
+                                p.x += Math.cos(angle) * force * settings.attractionForce;
+                                p.y += Math.sin(angle) * force * settings.attractionForce;
+                            }
+                        }
+                    }
+                    
+                    // Draw particle
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fillStyle = p.color;
+                    ctx.fill();
+                    
+                    // Draw connections
+                    if (settings.showConnections) {
+                        for (let j = i + 1; j < particles.length; j++) {
+                            const p2 = particles[j];
+                            const dx = p.x - p2.x;
+                            const dy = p.y - p2.y;
+                            const distance = Math.sqrt(dx * dx + dy * dy);
+                            
+                            if (distance < settings.connectionDistance) {
+                                const opacity = 1 - distance / settings.connectionDistance;
+                                ctx.beginPath();
+                                ctx.strokeStyle = `rgba(255, 255, 255, ${opacity * 0.3})`;
+                                ctx.lineWidth = 0.5;
+                                ctx.moveTo(p.x, p.y);
+                                ctx.lineTo(p2.x, p2.y);
+                                ctx.stroke();
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Event listeners
+            window.addEventListener('resize', () => {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                initParticles();
+            });
+            
+            document.getElementById('interactionArea').addEventListener('mousemove', (e) => {
+                mouse.x = e.clientX;
+                mouse.y = e.clientY;
+            });
+            
+            document.getElementById('interactionArea').addEventListener('mouseout', () => {
+                mouse.x = null;
+                mouse.y = null;
+            });
+            
+            // Control panel toggle
+            document.getElementById('togglePanel').addEventListener('click', () => {
+                const panel = document.getElementById('controlPanel');
+                panel.classList.toggle('translate-x-full');
+            });
+            
+            // Clear particles
+            document.getElementById('clearBtn').addEventListener('click', () => {
+                initParticles();
+            });
+            
+            // Color scheme selection
+            document.querySelectorAll('.color-option').forEach(option => {
+                option.addEventListener('click', () => {
+                    const colors = option.dataset.colors.split(',');
+                    if (colors.length === 1) {
+                        settings.colors = ['#FFFFFF'];
+                    } else {
+                        // Convert Tailwind color names to hex
+                        settings.colors = colors.map(color => {
+                            if (color === 'white') return '#FFFFFF';
+                            
+                            const [name, shade] = color.split('-');
+                            const tailwindColors = {
+                                purple: { '500': '#8B5CF6' },
+                                pink: { '500': '#EC4899' },
+                                blue: { '400': '#60A5FA' },
+                                cyan: { '400': '#22D3EE' },
+                                green: { '400': '#4ADE80' },
+                                teal: { '400': '#2DD4BF' },
+                                yellow: { '400': '#FACC15' },
+                                orange: { '500': '#F97316' },
+                                red: { '500': '#EF4444' }
+                            };
+                            
+                            return tailwindColors[name][shade];
+                        });
+                    }
+                    
+                    // Update all particles with new colors
+                    particles.forEach(p => {
+                        p.color = getRandomColor();
+                    });
+                });
+            });
+            
+            // Slider controls
+            document.getElementById('particleCount').addEventListener('input', (e) => {
+                settings.particleCount = parseInt(e.target.value);
+                document.getElementById('countValue').textContent = settings.particleCount;
+                initParticles();
+            });
+            
+            document.getElementById('particleSize').addEventListener('input', (e) => {
+                settings.particleSize = parseInt(e.target.value);
+                document.getElementById('sizeValue').textContent = settings.particleSize;
+                particles.forEach(p => {
+                    p.size = Math.random() * settings.particleSize + 1;
+                });
+            });
+            
+            document.getElementById('particleSpeed').addEventListener('input', (e) => {
+                settings.speed = parseFloat(e.target.value);
+                document.getElementById('speedValue').textContent = settings.speed.toFixed(1);
+                particles.forEach(p => {
+                    p.speedX = (Math.random() - 0.5) * settings.speed;
+                    p.speedY = (Math.random() - 0.5) * settings.speed;
+                });
+            });
+            
+            document.getElementById('attractionForce').addEventListener('input', (e) => {
+                settings.attractionForce = parseFloat(e.target.value);
+                document.getElementById('forceValue').textContent = settings.attractionForce.toFixed(1);
+            });
+            
+            document.getElementById('connectionDistance').addEventListener('input', (e) => {
+                settings.connectionDistance = parseInt(e.target.value);
+                document.getElementById('distanceValue').textContent = settings.connectionDistance;
+            });
+            
+            document.getElementById('showConnections').addEventListener('change', (e) => {
+                settings.showConnections = e.target.checked;
+            });
+            
+            // Interaction mode
+            document.getElementById('modeAttract').addEventListener('click', () => {
+                settings.interactionMode = 'attract';
+                document.getElementById('modeAttract').classList.add('bg-indigo-600');
+                document.getElementById('modeAttract').classList.remove('bg-gray-700');
+                document.getElementById('modeRepel').classList.add('bg-gray-700');
+                document.getElementById('modeRepel').classList.remove('bg-indigo-600');
+            });
+            
+            document.getElementById('modeRepel').addEventListener('click', () => {
+                settings.interactionMode = 'repel';
+                document.getElementById('modeRepel').classList.add('bg-indigo-600');
+                document.getElementById('modeRepel').classList.remove('bg-gray-700');
+                document.getElementById('modeAttract').classList.add('bg-gray-700');
+                document.getElementById('modeAttract').classList.remove('bg-indigo-600');
+            });
+            
+            // Randomize button
+            document.getElementById('randomizeBtn').addEventListener('click', () => {
+                // Random color scheme
+                const colorOptions = [
+                    ['purple-500', 'pink-500'],
+                    ['blue-400', 'cyan-400'],
+                    ['green-400', 'teal-400'],
+                    ['yellow-400', 'orange-500'],
+                    ['red-500', 'pink-500'],
+                    ['white']
+                ];
+                
+                const randomColors = colorOptions[Math.floor(Math.random() * colorOptions.length)];
+                settings.colors = randomColors.map(color => {
+                    if (color === 'white') return '#FFFFFF';
+                    
+                    const [name, shade] = color.split('-');
+                    const tailwindColors = {
+                        purple: { '500': '#8B5CF6' },
+                        pink: { '500': '#EC4899' },
+                        blue: { '400': '#60A5FA' },
+                        cyan: { '400': '#22D3EE' },
+                        green: { '400': '#4ADE80' },
+                        teal: { '400': '#2DD4BF' },
+                        yellow: { '400': '#FACC15' },
+                        orange: { '500': '#F97316' },
+                        red: { '500': '#EF4444' }
+                    };
+                    
+                    return tailwindColors[name][shade];
+                });
+                
+                // Random settings
+                settings.particleCount = Math.floor(Math.random() * 451) + 50;
+                settings.particleSize = Math.floor(Math.random() * 10) + 1;
+                settings.speed = (Math.random() * 2.9) + 0.1;
+                settings.attractionForce = (Math.random() * 2).toFixed(1);
+                settings.connectionDistance = Math.floor(Math.random() * 251) + 50;
+                settings.showConnections = Math.random() > 0.5;
+                settings.interactionMode = Math.random() > 0.5 ? 'attract' : 'repel';
+                
+                // Update UI
+                document.getElementById('particleCount').value = settings.particleCount;
+                document.getElementById('countValue').textContent = settings.particleCount;
+                document.getElementById('particleSize').value = settings.particleSize;
+                document.getElementById('sizeValue').textContent = settings.particleSize;
+                document.getElementById('particleSpeed').value = settings.speed;
+                document.getElementById('speedValue').textContent = settings.speed.toFixed(1);
+                document.getElementById('attractionForce').value = settings.attractionForce;
+                document.getElementById('forceValue').textContent = settings.attractionForce;
+                document.getElementById('connectionDistance').value = settings.connectionDistance;
+                document.getElementById('distanceValue').textContent = settings.connectionDistance;
+                document.getElementById('showConnections').checked = settings.showConnections;
+                
+                if (settings.interactionMode === 'attract') {
+                    document.getElementById('modeAttract').classList.add('bg-indigo-600');
+                    document.getElementById('modeAttract').classList.remove('bg-gray-700');
+                    document.getElementById('modeRepel').classList.add('bg-gray-700');
+                    document.getElementById('modeRepel').classList.remove('bg-indigo-600');
+                } else {
+                    document.getElementById('modeRepel').classList.add('bg-indigo-600');
+                    document.getElementById('modeRepel').classList.remove('bg-gray-700');
+                    document.getElementById('modeAttract').classList.add('bg-gray-700');
+                    document.getElementById('modeAttract').classList.remove('bg-indigo-600');
+                }
+                
+                // Reinitialize particles
+                initParticles();
+            });
+            
+            // Start the animation
+            initParticles();
+            animate();
+        });
+    </script>
+</body>
+</html>
