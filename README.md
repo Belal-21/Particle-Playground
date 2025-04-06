@@ -3,6 +3,7 @@
 A interactive particle simulation website.  
 
 ## Features  
-- Interactive particle effects  
+- cool particle effects  
 - Customizable settings (color, speed, size)  
-- cool design  
+- Good design  
+### :)
